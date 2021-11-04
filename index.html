@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Code test for Bionamic</title>
+    <style>
+    	
+    </style>
+</head>
+<body>
+
+
+
+<canvas id="background" width="720" height="320"></canvas>
+<canvas id="myCanvas" width="480" height="320"></canvas>
+<button style="position: absolute; top:20px; left:520px;" onclick="location.reload()">Reset</button> 
+
+
+<script>
+
+
+//CANVAS SETUP//
+
+// I create two canvases, one for the static background and one for the moving diamonds
+var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+canvas.style.position = "absolute"
+var background = document.getElementById("background");
+var bctx = background.getContext("2d");
+background.style.position = "absolute"
+
+
+//VARIABLES//
+
+//Available colours
+var colours = [ "blue", "green", "red", "yellow"];
+
+//Variables for storing mouse position
+var mouseX;
+var mouseY;
+
+//Variables regarding the diamonds
+var diamondAmount = 4;
+var diamondWidth = 50 
+
+//Scoreboard dimensions
+var scoreboardlength = (1/8)*background.width; //Length of the oblong scoreboard shape
+var scoreboardPaddingHorizontal = (1/12)*background.width; //Horizontal padding between the scoreboard and finish line
+var scoreboardPaddingVertical = 30; //Vertical padding between the different oblong shapes
+var scoreboardheight = 20; //Height of the oblong shapes
+
+//Scoreboard starting position
+var oblongX = 2/3 * background.width + scoreboardPaddingHorizontal;
+var oblongY = 1/2 * background.height - 1/2 * diamondAmount * (scoreboardPaddingVertical + scoreboardheight/2);
+
+//Arrays for storing the different diamond and scoreboard objects
+var diamonds = [];
+var scoreboards = [];
+
+
+//DRAWING THE STATIC BACKGROUND//
+
+//Start and finish line
+bctx.beginPath();
+bctx.moveTo(diamondWidth/2, 15);
+bctx.lineTo(diamondWidth/2, canvas.height); 
+bctx.moveTo(canvas.width-diamondWidth/2, 15);
+bctx.lineTo(canvas.width-diamondWidth/2, canvas.height);
+bctx.stroke(); 
+bctx.closePath();
+
+//Scoreboard text
+bctx.font = "10px Arial";
+bctx.textAlign = "center";
+bctx.fillText("Start", diamondWidth/2 ,10); 
+bctx.fillText("End", canvas.width - diamondWidth/2 ,10); 
+bctx.fillText("Scoreboard", oblongX,oblongY)
+
+
+
+//EVENT LISTENERS FOR MOUSE CLICK
+window.addEventListener('mousedown',function (e) { 
+    mouseX = e.pageX - canvas.offsetLeft;
+    mouseY = e.pageY - canvas.offsetTop;
+})
+window.addEventListener('mouseup',function(e) {
+    mouseX = false;
+    mouseY = false;
+})
+
+
+
+
+
+
+
+//CLASSES//
+
+
+//Class for the drawing the scoreboard, and updating its score
+class Scoreboard {
+    constructor(x,y,colour) {
+        this.x = x;
+        this.y = y;
+        this.colour = colour;
+        
+        //Draws the static oblong shape
+        bctx.beginPath();
+        bctx.arc(x + scoreboardlength/2, y,scoreboardheight/2,0,2*Math.PI );
+        bctx.rect(x - scoreboardlength/2,y - scoreboardheight/2,scoreboardlength,scoreboardheight);
+        bctx.arc(x - scoreboardlength/2, y,scoreboardheight/2,0,2*Math.PI );
+        bctx.fillStyle = this.colour;
+        bctx.fill();
+        bctx.closePath();
+
+        //initialize score tracker
+        bctx.fillStyle = "black"
+        bctx.fillText(0, this.x + scoreboardlength ,this.y);    
+    }
+    updateScore(newScore) {
+        //Updates the score
+        bctx.clearRect(this.x + scoreboardlength - 6 ,this.y -6, 20,20)
+        bctx.fillText(newScore, this.x + scoreboardlength ,this.y); 
+    }
+}
+
+//Class for drawing, moving and clicking the diamonds
+class Diamond {
+    constructor(x,y,colour) {
+        this.size = canvas.height/diamondAmount;
+        this.x = x;
+        this.y = y;
+        this.points = 0;
+        this.colour = colour;
+        
+        //Draws the diamond
+        ctx.beginPath(); 
+        ctx.moveTo(x+diamondWidth/2,y);
+        ctx.lineTo(x,y - diamondWidth/2);
+        ctx.lineTo(x-diamondWidth/2,y);
+        ctx.lineTo(x,y+diamondWidth/2);
+        ctx.lineTo(x+diamondWidth/2,y);
+        ctx.fillStyle = this.colour;
+        ctx.fill();
+        ctx.closePath();
+    }
+    clicked() {
+        //Checks if the diamond has been clicked
+        var clicked = false;
+
+        //Transform the coordinates
+        var xposfromdiamond = mouseX - this.x;
+        var yposfromdiamond = mouseY - this.y;
+        
+        
+        if ((Math.abs(xposfromdiamond) + Math.abs(yposfromdiamond)) < (diamondWidth/2)) {
+            clicked = true;
+        }
+        return clicked;
+        }
+
+
+
+    move() {
+        ctx.clearRect(this.x-diamondWidth/2,this.y-diamondWidth/2,diamondWidth,diamondWidth);
+        this.x += 43; //Fixa ett bättre sätt att beskirva längden
+        ctx.beginPath();
+        ctx.moveTo(this.x+diamondWidth/2,this.y);
+        ctx.lineTo(this.x,this.y - diamondWidth/2);
+        ctx.lineTo(this.x-diamondWidth/2,this.y);
+        ctx.lineTo(this.x,this.y+diamondWidth/2);
+        ctx.lineTo(this.x+diamondWidth/2,this.y);
+        ctx.fillStyle = this.colour;
+        ctx.fill();
+        ctx.closePath();
+    }
+    score() {
+        if (this.points === 10) {
+            location.reload()
+        }
+        this.points += 1;
+        
+    }
+
+    }
+
+  
+
+//MAIN CODE//
+//Starts by creating the scoreboard trackers
+for(var c = 0; c<diamondAmount; c++) {
+    oblongY += scoreboardPaddingVertical
+    scoreboards[c] = new Scoreboard(oblongX,oblongY,colours[c]);
+}
+
+//Creates the diamonds
+for(var c = 0; c<diamondAmount; c++) {
+    diamonds[c] = new Diamond(diamondWidth/2,c*68 + 68,colours[c]); 
+}
+
+
+
+
+
+function checkforclick() {
+    //Reruns this function constantly to check whether or not a diamond has been clicked
+    if (mouseX) {
+        for(var c = 0; c<diamondAmount; c++){
+            if (diamonds[c].clicked())  {
+                diamonds[c].score()
+                diamonds[c].move()
+                scoreboards[c].updateScore(diamonds[c].points)
+            }
+        }
+    }
+}
+
+//EXPLANATION
+//Running the code will create both the scoreboard and the diamonds.
+//Then it will repeatedly call the checkforclick function. Which checks whether or not the position of the mouse coordinates is either "false" or a number.
+//The eventlistener for mouseclicks updates the coordinates for the mouse coordinates mouseX and mouseY.
+//The checkforclick function then calls the .clicked method of the diamond object to decide whether or not the mouse coordinates are within either of the 4 diamonds.
+//Should the mouse be within a diamond it will update that diamonds score and move it forward a step, it will also call the .updateScore method of the scoreboard to refresh the text
+
+var interval = setInterval(checkforclick, 10)
+
+
+
+
+
+
+</script>
+
+</body>
+</html>
