@@ -1,1 +1,1 @@
-"Info about this project" 
+"This repository contains the code test for Bionamic" 
